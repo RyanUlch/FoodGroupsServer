@@ -3,7 +3,6 @@ const md5 = require('md5');
 
 // Generate an token to create session tokens
 const generate = (id) => {
-	console.log(id);
     return `a${md5(Math.random())}mr${md5(Math.random())}w${md5(id)}`; // remove `0.`
 }
 

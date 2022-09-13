@@ -16,7 +16,7 @@ const sessionsRouter 	= require('./routes/sessions');
 
 // Create Express Server
 var app = express();
-app.use(cors({ origin: 'http://localhost:3000',	credentials: true }));
+app.use(cors({ origin: 'https://foodgroupsserver.herokuapp.com/',	credentials: true }));
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
