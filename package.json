@@ -2,6 +2,9 @@
   "name": "food-groups-server",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+	"node": "16.15.0"
+  },
   "scripts": {
     "start": "node ./bin/www"
   },
