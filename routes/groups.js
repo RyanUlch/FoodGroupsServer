@@ -6,7 +6,7 @@
 	
 /* Express/Argon2/Helper Imports */
 const express = require('express');
-const argon2 = require('argon2');
+// const argon2 = require('argon2');
 const server = require('../helpers/server');
 /* Get Router info from express */
 const router = express.Router();
@@ -67,7 +67,6 @@ router.post('/join', (request, response) => {
 const join_select_groups = (connection, response, body) => {
 	console.log(1);
 	connection.query(`SELECT * FROM \`groups\` WHERE groupName=?;`, [body.groupName], (error, results) => {
-		console.log(error);
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		if (results.length) {
 			join_verify(connection, response, body.groupPass, results[0], body.userID);
@@ -80,14 +79,19 @@ const join_select_groups = (connection, response, body) => {
 
 // 2. VERIFY
 const join_verify = (connection, response, clientPass, groupInfo, userID) => {
-	argon2.verify(groupInfo.groupPass, clientPass).then(verifiedPassword => {
-		if (verifiedPassword) {
+	// Argon 2 being taken out of due to segmentation fault from import
+		//This means there is pretty much no password checking at all, it will always log in.
+		// Only using this to get program running first before diagnosing and/or switching to a
+		// different hashing/checking library
+	
+	// argon2.verify(groupInfo.groupPass, clientPass).then(verifiedPassword => {
+		if (clientPass) {
 			join_replace_usergroups(connection, response, groupInfo, userID);
 		} else {
 			// 2.1 FAILOUT
 			server.endRequestFailure('Password does not match', response);
 		}
-	});
+	// });
 }
 
 // 3. REPLACE
@@ -156,9 +160,15 @@ const create_select_groups = (connection, response, body) => {
 
 // 2. HASH
 const create_hash = (connection, response, body) => {
-	argon2.hash(`${body.groupPass}`).then(hashedPassword => {
-		create_insert_groups(connection, response, hashedPassword, body);
-	});
+	// Argon 2 being taken out of due to segmentation fault from import
+		//This means there is pretty much no password checking at all, it will always log in.
+		// Only using this to get program running first before diagnosing and/or switching to a
+		// different hashing/checking library
+
+
+	// argon2.hash(`${body.groupPass}`).then(hashedPassword => {
+		create_insert_groups(connection, response, body.groupPass, body);//hashedPassword, body);
+	// });
 }
 
 // 3. INSERT

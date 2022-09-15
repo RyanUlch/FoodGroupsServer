@@ -1,14 +1,14 @@
 // MySQL import
 const mysql = require('mysql');
 // Environment Variables
-require('dotenv').config();
+// require('dotenv').config();
 
 // Connection information - Change here when Server changes
 const connect = mysql.createConnection({
-	host     : process.env.host,
-	user     : process.env.user,
-	password : process.env.password,
-	database : process.env.database
+	host     : 'localhost:3306',
+	user     : 'ryan',
+	password : 'nKKx;kf)=J]x',
+	database : 'Tables'
 });
 
 // Sends response to client with success response and optional payload

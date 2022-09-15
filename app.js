@@ -5,7 +5,7 @@ const path 			= require('path');
 const cookieParser 	= require('cookie-parser');
 const logger 		= require('morgan');
 const cors 			= require('cors');
-const helmet		= require("helmet");
+const helmet		= require('helmet');
 
 // Route Imports
 const accountsRouter 	= require('./routes/accounts');
@@ -16,7 +16,7 @@ const sessionsRouter 	= require('./routes/sessions');
 
 // Create Express Server
 var app = express();
-app.use(cors({ origin: 'https://foodgroupsserver.herokuapp.com/',	credentials: true }));
+app.use(cors({ origin: 'https://food-groups.com/',	credentials: true }));
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
