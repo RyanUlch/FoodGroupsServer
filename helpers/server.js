@@ -5,10 +5,11 @@ const mysql = require('mysql');
 
 // Connection information - Change here when Server changes
 const connect = mysql.createConnection({
-	host     : 'localhost:3306',
-	user     : 'ryan',
-	password : 'nKKx;kf)=J]x',
-	database : 'Tables'
+	host     	: 'localhost',
+	port		: 3306,
+	user     	: 'Ryan',
+	password 	: '$whJk_0Gy7t-',//nKKx;kf)=J]x
+	database 	: 'Tables'
 });
 
 // Sends response to client with success response and optional payload

@@ -1,12 +1,14 @@
 // Table of Contents:
-	// line 12		- /login	- Check if user can log in
-	// line 86		- /signup	- Add user to DB
-	// line 179		- /addFav	- Add Favorite Recipe
-	// line 204		- /remFav	- Remove Favorite Recipe
+	// line 17		- /login	- Check if user can log in
+	// line 93		- /signup	- Add user to DB
+	// line 194		- /addFav	- Add Favorite Recipe
+	// line 219		- /remFav	- Remove Favorite Recipe
 
-/* Express/Argon2/Helper Imports */
+const bodyParser = require('body-parser');
+const jsonParser = bodyParser.json();
+
+/* Express/Helper Imports */
 const express = require('express');
-// const argon2 = require('argon2');
 const server = require('../helpers/server');
 const token = require('../helpers/sessions');
 /* Get Router info from express */
@@ -32,7 +34,7 @@ const router = express.Router();
 	// Uses same login logic as the checking session data route - CHANGE ./routes/sessions.js upon changing 1. SELECT
 
 // 0. STARTPOINT
-router.post('/login', (request, response) => {
+router.post('/login', jsonParser, (request, response) => {
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
 
@@ -60,19 +62,17 @@ const login_select_users = (connection, response, username, password) => {
 
 // 2. VERIFY
 const login_verify_password = (connection, response, results, clientPass) => {
-	// Argon 2 being taken out of due to segmentation fault from import
-		//This means there is pretty much no password checking at all, it will always log in.
-		// Only using this to get program running first before diagnosing and/or switching to a
-		// different hashing/checking library
-	
-	// argon2.verify(results.password, clientPass).then(verifiedPassword => {
-		if (results.password === clientPass) {
+	const phpString = `echo password_verify('${clientPass}', '${results.password}') ? 'true' : 'false';`
+	const runner = require('child_process');
+	runner.execFile('php', ['-r', phpString], (err, stdout) => {
+		if (stdout === 'true') {
 			login_replace_usersessions(connection, response, results);
-		} else {
-			// 2.1 FAILOUT
+		} else if (stdout === 'false') {
 			server.endRequestFailure('That password is incorrect', response);
+		} else {
+			server.endRequestFailure(err, response);
 		}
-	// });
+	});
 }
 
 // 3. REPLACE
@@ -113,7 +113,8 @@ const login_replace_usersessions = (connection, response, userInfo) => {
 		// - If userbase grows, will need to add email confirmation before accounts can add/join groups/recipes
 
 // 0. STARTPOINT
-router.post('/signup', (request, response) => {
+router.post('/signup', jsonParser, (request, response) => {
+	console.log(request.body);
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
 
@@ -122,6 +123,7 @@ router.post('/signup', (request, response) => {
 
 // 1. SELECT
 const signup_select_users = (connection, response, username, email, password) => {
+	console.log(username, password, email);
 	if (username && email && password) {
 		connection.query('SELECT userID FROM users WHERE username=? or email=?;', [username, email], (error, results) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
@@ -141,14 +143,15 @@ const signup_select_users = (connection, response, username, email, password) =>
 
 // 2. HASH
 const signup_hash_password = (connection, response, password, username, email) => {
-	// Argon 2 being taken out of due to segmentation fault from import
-		//This means there is pretty much no password checking at all, it will always log in.
-		// Only using this to get program running first before diagnosing and/or switching to a
-		// different hashing/checking library
-	
-	// argon2.hash(`${password}`).then(hashedPassword => {
-		signup_insert_users(connection, response, username, email, password);
-	// });
+	const runner = require('child_process');
+	const phpString = `echo password_hash('${password}', PASSWORD_DEFAULT);`;
+	runner.execFile('php', ['-r', phpString], (err, stdout) => {
+		if (!err) { 
+			signup_insert_users(connection, response, username, email, stdout);
+		} else {
+			server.endRequestFailure(err, response);
+		}
+	});
 }
 
 // 3. INSERT
@@ -200,7 +203,7 @@ const signup_insert_usersessions = (connection, response, username, userID) => {
 	// None
 
 // 0. STARTPOINT
-router.post('/addFav', (request, response) => {
+router.post('/addFav', jsonParser, (request, response) => {
 	response.set({'Content-Type': 'application/json'});
 	const connection = server.connect;
 
@@ -225,7 +228,7 @@ router.post('/addFav', (request, response) => {
 	// None
 
 // 0. STARTPOINT
-router.post('/remFav', (request, response) => {
+router.post('/remFav', jsonParser, (request, response) => {
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
 
