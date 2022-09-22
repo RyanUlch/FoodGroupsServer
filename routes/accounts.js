@@ -14,6 +14,8 @@ const token = require('../helpers/sessions');
 /* Get Router info from express */
 const router = express.Router();
 
+const log = (step) => { console.log(`Running: ${step}`); }
+
 /* Check if user can log in */ /* Check if user can log in */ /* Check if user can log in */ /* Check if user can log in */
 /* Checks supplied username/password supplied by client against DB, if successful, creates, sends and logs a sessionID */
 
@@ -35,14 +37,15 @@ const router = express.Router();
 
 // 0. STARTPOINT
 router.post('/login', jsonParser, (request, response) => {
+	log('Login Startpoint');
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
-
 	login_select_users(connection, response, request.body.username, request.body.password);
 });
 
 // 1. SELECT
 const login_select_users = (connection, response, username, password) => {
+	log('login_select_users');
 	if (username && password) {
 		connection.query(`SELECT password, userID, username FROM users WHERE username = ?;`, [username], (error, results) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
@@ -62,6 +65,7 @@ const login_select_users = (connection, response, username, password) => {
 
 // 2. VERIFY
 const login_verify_password = (connection, response, results, clientPass) => {
+	log('login_verify_password');
 	const phpString = `echo password_verify('${clientPass}', '${results.password}') ? 'true' : 'false';`
 	const runner = require('child_process');
 	runner.execFile('php', ['-r', phpString], (err, stdout) => {
@@ -77,11 +81,13 @@ const login_verify_password = (connection, response, results, clientPass) => {
 
 // 3. REPLACE
 const login_replace_usersessions = (connection, response, userInfo) => {
+	log('login_replace_usersessions');
 	const sessionID = token.generate(userInfo.userID);
 	connection.query(`REPLACE INTO user_sessions (userID, sessionID) VALUES (?, ?);`, [userInfo.userID, sessionID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 
 		// 4. ENDPOINT
+		log('Login Endpoint');
 		server.endRequestSuccess(response, {
 			userID: userInfo.userID,
 			username: userInfo.username,
@@ -114,7 +120,7 @@ const login_replace_usersessions = (connection, response, userInfo) => {
 
 // 0. STARTPOINT
 router.post('/signup', jsonParser, (request, response) => {
-	console.log(request.body);
+	log('SignUp Startpoint');
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
 
@@ -123,15 +129,16 @@ router.post('/signup', jsonParser, (request, response) => {
 
 // 1. SELECT
 const signup_select_users = (connection, response, username, email, password) => {
-	console.log(username, password, email);
+	log('signup_select_users');
 	if (username && email && password) {
 		connection.query('SELECT userID FROM users WHERE username=? or email=?;', [username, email], (error, results) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 			if (results.length > 0) {
 				// 1.2 FAILOUT
 				server.endRequestFailure('That username or email is already taken...', response);
 			} else {
+				console.log('before before hash');
+
 				signup_hash_password(connection, response, password, username, email);
 			};
 		});
@@ -143,6 +150,7 @@ const signup_select_users = (connection, response, username, email, password) =>
 
 // 2. HASH
 const signup_hash_password = (connection, response, password, username, email) => {
+	log('signup_hash_password');
 	const runner = require('child_process');
 	const phpString = `echo password_hash('${password}', PASSWORD_DEFAULT);`;
 	runner.execFile('php', ['-r', phpString], (err, stdout) => {
@@ -156,6 +164,7 @@ const signup_hash_password = (connection, response, password, username, email) =
 
 // 3. INSERT
 const signup_insert_users = (connection, response, username, email, password) => {
+	log('signup_insert_users');
 	connection.query('INSERT INTO users (username, email, password) VALUES (?, ?, ?);', [username, email, password], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 
@@ -165,6 +174,7 @@ const signup_insert_users = (connection, response, username, email, password) =>
 
 // 4. GET ID
 const signup_id = (connection, response, username) => {
+	log(signup_id)
 	connection.query('SELECT LAST_INSERT_ID();', (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		if (results.length > 0) {
@@ -178,11 +188,13 @@ const signup_id = (connection, response, username) => {
 
 // 5. INSERT
 const signup_insert_usersessions = (connection, response, username, userID) => {
+	log('signup_insert_usersession')
 	const sessionID = token.generate(userID);
 	connection.query(`INSERT INTO user_sessions (userID, sessionID) VALUES (?, ?);`, [userID, sessionID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 
 		// 6. ENDPOINT
+		log('Signup Endpoint')
 		server.endRequestSuccess(response, {
 			userID: userID,
 			username: username,
