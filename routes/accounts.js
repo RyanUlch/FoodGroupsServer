@@ -1,8 +1,8 @@
 // Table of Contents:
-	// line 17		- /login	- Check if user can log in
-	// line 93		- /signup	- Add user to DB
-	// line 194		- /addFav	- Add Favorite Recipe
-	// line 219		- /remFav	- Remove Favorite Recipe
+	// line 19		- /login	- Check if user can log in
+	// line 99		- /signup	- Add user to DB
+	// line 217		- /addFav	- Add Favorite Recipe
+	// line 242		- /remFav	- Remove Favorite Recipe
 
 const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
@@ -108,6 +108,7 @@ const login_replace_usersessions = (connection, response, userInfo) => {
 	// 3. INSERT			- Into users a newly created account
 	// 4. GET ID			- Use 'Last_Insert_ID()' to get the userID for new account
 		// 4.1 FAILOUT		- No ID was povided, not sure what could cause this if previous insert succeeded
+	// 5. INSERT			- Create relation between user and group everyone auto joins
 	// 5. INSERT			- Create and add sessionID into user_sessions as if they logged in
 	// 6. ENDPOINT			- Send client success response
 
@@ -174,11 +175,11 @@ const signup_insert_users = (connection, response, username, email, password) =>
 
 // 4. GET ID
 const signup_id = (connection, response, username) => {
-	log(signup_id)
+	log(signup_id);
 	connection.query('SELECT LAST_INSERT_ID();', (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		if (results.length > 0) {
-			signup_insert_usersessions(connection, response, username, results[0]['LAST_INSERT_ID()']);
+			signup_insert_usergroups(connection, response, username, results[0]['LAST_INSERT_ID()']);
 		} else {
 			// 4.1 FAILOUT
 			server.endRequestFailure('There was an unknown error adding a new account...', response);
@@ -187,14 +188,24 @@ const signup_id = (connection, response, username) => {
 }
 
 // 5. INSERT
+const signup_insert_usergroups = (connection, response, username, userID) => {
+	log('signup_insert_usergroups');
+	connection.query(`INSERT INTO user_groups (userID, groupID) VALUES (?, ?);`, [userID, -1], (error) => {
+		if (error) { server.endRequestFailure(error, response); return console.error(error); }
+	
+		signup_insert_usersessions(connection, response, username, userID);
+	});
+}
+
+// 6. INSERT
 const signup_insert_usersessions = (connection, response, username, userID) => {
-	log('signup_insert_usersession')
+	log('signup_insert_usersession');
 	const sessionID = token.generate(userID);
 	connection.query(`INSERT INTO user_sessions (userID, sessionID) VALUES (?, ?);`, [userID, sessionID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 
-		// 6. ENDPOINT
-		log('Signup Endpoint')
+		// 7. ENDPOINT
+		log('Signup Endpoint');
 		server.endRequestSuccess(response, {
 			userID: userID,
 			username: username,

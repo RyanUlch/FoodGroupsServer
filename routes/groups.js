@@ -1,8 +1,8 @@
 // Table of Contents:
 	// line 14	- /get		- Get Groups for User
 	// line 42	- /join		- Join Groups with Password
-	// line 119	- /create	- Create New Group
-	// line	194	- /leave	- Leave Group
+	// line 122	- /create	- Create New Group
+	// line	202	- /leave	- Leave Group
 	
 /* Express/Argon2/Helper Imports */
 const express = require('express');
@@ -79,19 +79,17 @@ const join_select_groups = (connection, response, body) => {
 
 // 2. VERIFY
 const join_verify = (connection, response, clientPass, groupInfo, userID) => {
-	// Argon 2 being taken out of due to segmentation fault from import
-		//This means there is pretty much no password checking at all, it will always log in.
-		// Only using this to get program running first before diagnosing and/or switching to a
-		// different hashing/checking library
-	
-	// argon2.verify(groupInfo.groupPass, clientPass).then(verifiedPassword => {
-		if (clientPass) {
+	const phpString = `echo password_verify('${clientPass}', '${groupInfo.password}') ? 'true' : 'false';`
+	const runner = require('child_process');
+	runner.execFile('php', ['-r', phpString], (err, stdout) => {
+		if (stdout === 'true') {
 			join_replace_usergroups(connection, response, groupInfo, userID);
+		} else if (stdout === 'false') {
+			server.endRequestFailure('That password is incorrect', response);
 		} else {
-			// 2.1 FAILOUT
-			server.endRequestFailure('Password does not match', response);
+			server.endRequestFailure(err, response);
 		}
-	// });
+	});
 }
 
 // 3. REPLACE
@@ -160,15 +158,14 @@ const create_select_groups = (connection, response, body) => {
 
 // 2. HASH
 const create_hash = (connection, response, body) => {
-	// Argon 2 being taken out of due to segmentation fault from import
-		//This means there is pretty much no password checking at all, it will always log in.
-		// Only using this to get program running first before diagnosing and/or switching to a
-		// different hashing/checking library
-
-
-	// argon2.hash(`${body.groupPass}`).then(hashedPassword => {
-		create_insert_groups(connection, response, body.groupPass, body);//hashedPassword, body);
-	// });
+	log('signup_hash_password');
+	const runner = require('child_process');
+	const phpString = `echo password_hash('${password}', PASSWORD_DEFAULT);`;
+	runner.execFile('php', ['-r', phpString], (err, stdout) => {
+		if (!err) { 
+			create_insert_groups(connection, response, stdout, body);
+		}
+	});
 }
 
 // 3. INSERT
