@@ -290,7 +290,8 @@ const get_select_recipes = (connection, response, recipeObj, userID) => {
 			server.endRequestSuccess(response, recipeObj);
 		} else {
 			// 3.1 ENDEARLY
-			server.endRequestFailure('No Recipes', response);
+			server.log('Get Recipes Endpoint');
+			server.endRequestSuccess(response, { userRecipes: [], allRecipes: [], recipes: [], });
 		}
 	});
 }
