@@ -2,7 +2,7 @@
 	// line 14	- /get		- Get Groups for User
 	// line 42	- /join		- Join Groups with Password
 	// line 122	- /create	- Create New Group
-	// line	202	- /leave	- Leave Group
+	// line	205	- /leave	- Leave Group
 	
 /* Express/Argon2/Helper Imports */
 const express = require('express');
@@ -24,17 +24,17 @@ const router = express.Router();
 
 // 0. STARTPOINT
 router.post('/get', (request, response) => {
+	server.log('Get Groups Startpoint');
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
-
 	// 1. SELECT
+	server.log('Get Groups_select');
 	connection.query(`SELECT groupID, groupName FROM \`groups\` WHERE groupID IN (SELECT groupID FROM user_groups WHERE userID=?);`, [request.body.userID], (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		const groupArr = [];
 		results.forEach(result => groupArr.push({groupID: result.groupID, groupName: result.groupName}));
-
 		// 2. ENDPOINT 
+		server.log('Get Groups Endpoint');
 		server.endRequestSuccess(response, groupArr);
 	});
 });
@@ -57,15 +57,15 @@ router.post('/get', (request, response) => {
 
 // 0. STARTPOINT
 router.post('/join', (request, response) => {
+	server.log('Join Group Startpoin');
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
-
 	join_select_groups(connection, response, request.body)
 });
 
 // 1. SELECT
 const join_select_groups = (connection, response, body) => {
-	console.log(1);
+	server.log('join_select_groups');
 	connection.query(`SELECT * FROM \`groups\` WHERE groupName=?;`, [body.groupName], (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		if (results.length) {
@@ -79,6 +79,7 @@ const join_select_groups = (connection, response, body) => {
 
 // 2. VERIFY
 const join_verify = (connection, response, clientPass, groupInfo, userID) => {
+	server.log('join_verify');
 	const phpString = `echo password_verify('${clientPass}', '${groupInfo.password}') ? 'true' : 'false';`
 	const runner = require('child_process');
 	runner.execFile('php', ['-r', phpString], (err, stdout) => {
@@ -94,23 +95,22 @@ const join_verify = (connection, response, clientPass, groupInfo, userID) => {
 
 // 3. REPLACE
 const join_replace_usergroups = (connection, response, groupInfo, userID) => {
+	server.log('join_replace_usergroups');
 	connection.query(`REPLACE INTO user_groups (userID, groupID) VALUES (?, ?);`, [userID, groupInfo.groupID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-		
 		join_select_grouprecipes(connection, response, groupInfo);
 	});
 }
 
 // 4. SELECT
 const join_select_grouprecipes = (connection, response, groupInfo) => {
+	server.log('join_select_grouprecipes');
 	connection.query(`SELECT * FROM group_recipes WHERE groupID=?;`, [groupInfo.groupID], (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		const list = [];
-		for (const result of results) {
-			list.push(result.recipeID);
-		}
+		for (const result of results) {	list.push(result.recipeID);	}
 		// 5. ENDPOINT
+		server.log('Join Group Endpoint');
 		server.endRequestSuccess(response, {
 			groupID: groupInfo.groupID,
 			groupName: groupInfo.groupName,
@@ -137,14 +137,15 @@ const join_select_grouprecipes = (connection, response, groupInfo) => {
 
 // 0. STARTPOINT
 router.post('/create', (request, response) => {
+	server.log('Create Group Startpoint');
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
-
 	create_select_groups(connection, response, request.body);
 });
 
 // 1. SELECT
 const create_select_groups = (connection, response, body) => {
+	server.log('create_select_groups');
 	connection.query(`SELECT * FROM \`groups\` WHERE groupName=?;`, [body.groupName], (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		if (results.length > 0) {
@@ -158,7 +159,7 @@ const create_select_groups = (connection, response, body) => {
 
 // 2. HASH
 const create_hash = (connection, response, body) => {
-	log('signup_hash_password');
+	server.log('signup_hash_password');
 	const runner = require('child_process');
 	const phpString = `echo password_hash('${password}', PASSWORD_DEFAULT);`;
 	runner.execFile('php', ['-r', phpString], (err, stdout) => {
@@ -170,15 +171,16 @@ const create_hash = (connection, response, body) => {
 
 // 3. INSERT
 const create_insert_groups = (connection, response, password, body) => {
+	server.log('create_insert_groups');
 	connection.query(`INSERT INTO \`groups\` (groupName, groupPass) VALUES (?, ?);`, [body.groupName, password], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		create_id(connection, response, body);
 	});
 }
 
 // 4. GET ID
 const create_id = (connection, response, body) => {
+	server.log('create_id');
 	connection.query('SELECT LAST_INSERT_ID()', (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		create_insert_usergroups(connection, response, body, Number(results[0]['LAST_INSERT_ID()']));
@@ -187,10 +189,11 @@ const create_id = (connection, response, body) => {
 
 // 5. INSERT
 const create_insert_usergroups = (connection, response, body, groupID) => {
+	server.log('create_insert_usergroups');
 	connection.query(`INSERT INTO user_groups (userID, groupID) VALUES (?, ?);`, [body.userID, groupID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		// 6. ENDPOINT
+		server.log('Create Group Endpoint');
 		server.endRequestSuccess(response, {
 			groupID: groupID,
 			groupName: body.groupName,
@@ -212,14 +215,15 @@ const create_insert_usergroups = (connection, response, body, groupID) => {
 
 // 0. STARTPOINT
 router.post('/leave', (request, response) => {
+	server.log('Leave Group Startpoint');
 	response.set({ 'Content-Type': 'application/json' });	
 	const connection = server.connect;
-
 	// 1. DELETE
+	server.log('leave_delete');
 	connection.query(`DELETE FROM user_groups WHERE userID=? AND groupID=?;`, [request.body.userID, request.body.groupID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		// 2. ENDPOINT
+		server.log('Leave Group Endpoint');
 		server.endRequestSuccess(response);
 	});
 });

@@ -25,18 +25,18 @@ const router = express.Router();
 
 // 0. STARTPOINT
 router.post('/', (request, response) => {
+	server.log('User Sessions Startpoint')
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
-
 	select_usersessions(connection, response, request.body.userID, request.body.token);
 });
 
 // 1. SELECT
 const select_usersessions = (connection, response, userID, userToken) => {
+	server.log('select_usersessions')
 	if (userID && userToken && token.validate(userToken)) {
 		connection.query(`SELECT sessionID FROM user_sessions WHERE userID = ?;`, [userID], (error, results) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 			if (results.length === 0) {
 				// 1.2 FAILOUT
 				server.endRequestFailure('No Session in DB', response);
@@ -57,6 +57,7 @@ const select_usersessions = (connection, response, userID, userToken) => {
 
 // 2. SELECT
 const select_users = (connection, response, userID) => {
+	server.log('select_users')
 	connection.query(`SELECT userID, username FROM users WHERE userID = ?;`, [userID], (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 
@@ -65,6 +66,7 @@ const select_users = (connection, response, userID) => {
 			server.endRequestFailure('That username does not exist...', response);
 		} else {
 			// 3. ENDPOINT
+			server.log('User Sessions Endpoint')
 			server.endRequestSuccess(response, {
 				userID: results[0].userID,
 				username: results[0].username,

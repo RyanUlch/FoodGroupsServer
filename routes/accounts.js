@@ -1,8 +1,8 @@
 // Table of Contents:
-	// line 19		- /login	- Check if user can log in
-	// line 99		- /signup	- Add user to DB
-	// line 217		- /addFav	- Add Favorite Recipe
-	// line 242		- /remFav	- Remove Favorite Recipe
+	// line 17		- /login	- Check if user can log in
+	// line 96		- /signup	- Add user to DB
+	// line 208		- /addFav	- Add Favorite Recipe
+	// line 234		- /remFav	- Remove Favorite Recipe
 
 const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
@@ -13,8 +13,6 @@ const server = require('../helpers/server');
 const token = require('../helpers/sessions');
 /* Get Router info from express */
 const router = express.Router();
-
-const log = (step) => { console.log(`Running: ${step}`); }
 
 /* Check if user can log in */ /* Check if user can log in */ /* Check if user can log in */ /* Check if user can log in */
 /* Checks supplied username/password supplied by client against DB, if successful, creates, sends and logs a sessionID */
@@ -37,7 +35,7 @@ const log = (step) => { console.log(`Running: ${step}`); }
 
 // 0. STARTPOINT
 router.post('/login', jsonParser, (request, response) => {
-	log('Login Startpoint');
+	server.log('Login Startpoint');
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
 	login_select_users(connection, response, request.body.username, request.body.password);
@@ -45,7 +43,7 @@ router.post('/login', jsonParser, (request, response) => {
 
 // 1. SELECT
 const login_select_users = (connection, response, username, password) => {
-	log('login_select_users');
+	server.log('login_select_users');
 	if (username && password) {
 		connection.query(`SELECT password, userID, username FROM users WHERE username = ?;`, [username], (error, results) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
@@ -65,7 +63,7 @@ const login_select_users = (connection, response, username, password) => {
 
 // 2. VERIFY
 const login_verify_password = (connection, response, results, clientPass) => {
-	log('login_verify_password');
+	server.log('login_verify_password');
 	const phpString = `echo password_verify('${clientPass}', '${results.password}') ? 'true' : 'false';`
 	const runner = require('child_process');
 	runner.execFile('php', ['-r', phpString], (err, stdout) => {
@@ -81,13 +79,12 @@ const login_verify_password = (connection, response, results, clientPass) => {
 
 // 3. REPLACE
 const login_replace_usersessions = (connection, response, userInfo) => {
-	log('login_replace_usersessions');
+	server.log('login_replace_usersessions');
 	const sessionID = token.generate(userInfo.userID);
 	connection.query(`REPLACE INTO user_sessions (userID, sessionID) VALUES (?, ?);`, [userInfo.userID, sessionID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		// 4. ENDPOINT
-		log('Login Endpoint');
+		server.log('Login Endpoint');
 		server.endRequestSuccess(response, {
 			userID: userInfo.userID,
 			username: userInfo.username,
@@ -121,16 +118,15 @@ const login_replace_usersessions = (connection, response, userInfo) => {
 
 // 0. STARTPOINT
 router.post('/signup', jsonParser, (request, response) => {
-	log('SignUp Startpoint');
+	server.log('SignUp Startpoint');
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
-
 	signup_select_users(connection, response, request.body.username, request.body.email, request.body.password);	
 });
 
 // 1. SELECT
 const signup_select_users = (connection, response, username, email, password) => {
-	log('signup_select_users');
+	server.log('signup_select_users');
 	if (username && email && password) {
 		connection.query('SELECT userID FROM users WHERE username=? or email=?;', [username, email], (error, results) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
@@ -138,8 +134,6 @@ const signup_select_users = (connection, response, username, email, password) =>
 				// 1.2 FAILOUT
 				server.endRequestFailure('That username or email is already taken...', response);
 			} else {
-				console.log('before before hash');
-
 				signup_hash_password(connection, response, password, username, email);
 			};
 		});
@@ -151,7 +145,7 @@ const signup_select_users = (connection, response, username, email, password) =>
 
 // 2. HASH
 const signup_hash_password = (connection, response, password, username, email) => {
-	log('signup_hash_password');
+	server.log('signup_hash_password');
 	const runner = require('child_process');
 	const phpString = `echo password_hash('${password}', PASSWORD_DEFAULT);`;
 	runner.execFile('php', ['-r', phpString], (err, stdout) => {
@@ -165,17 +159,16 @@ const signup_hash_password = (connection, response, password, username, email) =
 
 // 3. INSERT
 const signup_insert_users = (connection, response, username, email, password) => {
-	log('signup_insert_users');
+	server.log('signup_insert_users');
 	connection.query('INSERT INTO users (username, email, password) VALUES (?, ?, ?);', [username, email, password], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		signup_id(connection, response, username);
 	});
 }
 
 // 4. GET ID
 const signup_id = (connection, response, username) => {
-	log(signup_id);
+	server.log('signup_id');
 	connection.query('SELECT LAST_INSERT_ID();', (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		if (results.length > 0) {
@@ -189,23 +182,21 @@ const signup_id = (connection, response, username) => {
 
 // 5. INSERT
 const signup_insert_usergroups = (connection, response, username, userID) => {
-	log('signup_insert_usergroups');
+	server.log('signup_insert_usergroups');
 	connection.query(`INSERT INTO user_groups (userID, groupID) VALUES (?, ?);`, [userID, -1], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-	
 		signup_insert_usersessions(connection, response, username, userID);
 	});
 }
 
 // 6. INSERT
 const signup_insert_usersessions = (connection, response, username, userID) => {
-	log('signup_insert_usersession');
+	server.log('signup_insert_usersession');
 	const sessionID = token.generate(userID);
 	connection.query(`INSERT INTO user_sessions (userID, sessionID) VALUES (?, ?);`, [userID, sessionID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		// 7. ENDPOINT
-		log('Signup Endpoint');
+		server.log('Signup Endpoint');
 		server.endRequestSuccess(response, {
 			userID: userID,
 			username: username,
@@ -227,14 +218,15 @@ const signup_insert_usersessions = (connection, response, username, userID) => {
 
 // 0. STARTPOINT
 router.post('/addFav', jsonParser, (request, response) => {
+	server.log('Add Favorite Recipe Startpoint')
 	response.set({'Content-Type': 'application/json'});
 	const connection = server.connect;
-
 	// 1. INSERT
+	server.log('addFav_insert')
 	connection.query(`INSERT IGNORE INTO user_recipes (userID, recipeID) VALUES (?, ?);`, [request.body.userID, request.body.recipeID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		// 2. ENDPOINT
+		server.log('Add Favorite Recipe Endpoint');
 		server.endRequestSuccess(response);
 	});
 });
@@ -252,14 +244,15 @@ router.post('/addFav', jsonParser, (request, response) => {
 
 // 0. STARTPOINT
 router.post('/remFav', jsonParser, (request, response) => {
+	server.log('Remove Favorite Recipe Startpoint');
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
-
 	// 1. DELETE
+	server.log('remFav_delete');
 	connection.query(`DELETE FROM user_recipes WHERE userID=? AND recipeID=?;`, [request.body.userID, request.body.recipeID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		// 2. ENDPOINT
+		server.log('Remove Favorite Recipe Endpoint');
 		server.endRequestSuccess(response);
 	});
 });

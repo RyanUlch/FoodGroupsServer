@@ -1,7 +1,7 @@
 // Table of Contents:
 	// line 15		- N/A			- Multer Setup
-	// line 23		- /uploadForm	- Upload Image
-	// line 48		- /download		- Download Image
+	// line 25		- /uploadForm	- Upload Image
+	// line 50		- /download		- Download Image
 
 /* Express/FileSystem(FS)/Multer/Path/Helper Imports */
 const express = require('express');
@@ -37,11 +37,12 @@ let upload = multer({ storage: storage,	fileFilter: fileFilter });
 
 // 0. STARTPOINT
 router.post('/upload', upload.single('file'), (request, response) => {
+	server.log('Upload Image Startpoint');
 	if (request.file) {
 		// 1. FILEPATH
 		const pathName = request.file.path;
-
 		// 2. ENDPOINT
+		server.log('Upload Image Endpoint');
 		server.endRequestSuccess(response);
 	};
 });
@@ -60,10 +61,12 @@ router.post('/upload', upload.single('file'), (request, response) => {
 
 // 0. STARTPOINT
 router.get('/download/:imageurl', (request, response) => {
+	server.log('Download Image Startpoint');
 	// 1. RESOLVE
 	const imageURL = path.resolve(`./public/uploads/${request.params.imageurl}`);
 	if (fs.existsSync(imageURL)) {
 		// 2. ENDPOINT
+		server.log('Download Image Endpoint');
 		response.sendFile(imageURL)
 	} else {
 		// 1.1 FAILOUT

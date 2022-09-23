@@ -1,7 +1,7 @@
 // Table of Contents:
 	// line 12		- /addedit		- Add/Edit Recipe
-	// line 120		- /delete		- Delete Recipe
-	// line 195		- /get			- Get Recipes
+	// line 124		- /delete		- Delete Recipe
+	// line 202		- /get			- Get Recipes
 
 /* Express/Helper Imports */
 const express = require('express');
@@ -31,6 +31,7 @@ const router = express.Router();
 
 // 0. STARTPOINT
 router.post('/addedit', (request, response) => {
+	server.log('Add/Edit Recipe Startpoint')
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
 	addedit_updateinsert_recipes(connection, response, request);
@@ -38,6 +39,7 @@ router.post('/addedit', (request, response) => {
 
 // 1. UPDATE/INSERT
 const addedit_updateinsert_recipes = (connection, response, request) => {
+	server.log('addedit_updateinsert_recipes');
 	let firstQuery;
 	const firstParams = [
 		request.body.recipeName,
@@ -54,7 +56,6 @@ const addedit_updateinsert_recipes = (connection, response, request) => {
 	} else { 
 		firstQuery = `INSERT INTO recipes (recipeName, recipeDescription, ingredients, instructions, owner, imgURL, servings) VALUES (?, ?, ?, ?, ?, ?, ?);`;
 	}
-
 	connection.query(firstQuery, firstParams, (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		addedit_select_lastquery(connection, response, request.body);
@@ -63,6 +64,7 @@ const addedit_updateinsert_recipes = (connection, response, request) => {
 
 // 2. SELECT
 const addedit_select_lastquery = (connection, response, body) => {
+	server.log('addedit_select_lastquery');
 	connection.query('SELECT LAST_INSERT_ID();', (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		addedit_insert_userrecipes(connection, response, results[0]['LAST_INSERT_ID()'], body);
@@ -71,6 +73,7 @@ const addedit_select_lastquery = (connection, response, body) => {
 
 // 3. INSERT
 const addedit_insert_userrecipes = (connection, response, id, body) => {
+	server.log('addedit_insert_userrecipes');
 	connection.query(`INSERT IGNORE INTO user_recipes (userID, recipeID) VALUES (?, ?);`, [body.userID, id], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		addedit_insert_grouprecipes(connection, response, id, body);
@@ -78,11 +81,11 @@ const addedit_insert_userrecipes = (connection, response, id, body) => {
 }
 
 // 4. INSERT
-const addedit_insert_grouprecipes = (connection, response, id,body) => {
+const addedit_insert_grouprecipes = (connection, response, id, body) => {
+	server.log('addedit_insert_grouprecipes');
 	const groupsAddArr = body.groupsToAddTo;
 	if (groupsAddArr.length > 0) { 	// If no groups provided, skip this query
 		for (let i = 0; i < groupsAddArr; ++i) groupsAddArr[i].push(id);
-
 		connection.query(`INSERT IGNORE INTO group_recipes (groupID, recipeID) VALUES ?;`, [groupsAddArr], (error) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
 			addedit_delete_grouprecipes(connection, response, id, body);
@@ -94,10 +97,10 @@ const addedit_insert_grouprecipes = (connection, response, id,body) => {
 
 // 5. DELETE
 const addedit_delete_grouprecipes = (connection, response, id, body) => {
+	server.log('addedit_delete_grouprecipes');
 	const groupsDelArr = body.groupsToDeleteFrom;
 	if (groupsDelArr.length > 0) { 	// If no groups provided, skip this query
 		for (let i = 0; i < groupsDelArr; ++i) groupsDelArr[i].push(id);
-
 		connection.query(`DELETE FROM group_recipes WHERE (groupID, recipeID) IN (?);`, [groupsDelArr], (error) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
 			addedit_select_recipes(connection, response, id);
@@ -109,10 +112,11 @@ const addedit_delete_grouprecipes = (connection, response, id, body) => {
 
 // 6. SELECT
 const addedit_select_recipes = (connection, response, id) => {
+	server.log('addedit_select_recipes');
 	connection.query(`SELECT * FROM recipes WHERE recipeID=?;`, [id], (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		// 7. ENDPOINT
+		server.log('Add/Edit Recipe Endpoint');
 		server.endRequestSuccess(response, results);
 	});
 }
@@ -141,6 +145,7 @@ const addedit_select_recipes = (connection, response, id) => {
 
 // 0. STARTPOINT
 router.delete('/delete', (request, response) => {
+	server.log('Delete Recipe Startpoint');
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
 	delete_select_recipes(connection, response, request.body);
@@ -148,6 +153,7 @@ router.delete('/delete', (request, response) => {
 
 // 1. SELECT
 const delete_select_recipes = (connection, response, body) => {
+	server.log('delete_select_recipes');
 	connection.query(`SELECT * FROM recipes WHERE recipeID=?;`, [Number(body.recipeID)], (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		if (results.length > 0) {
@@ -166,6 +172,7 @@ const delete_select_recipes = (connection, response, body) => {
 
 // 2. DELETE
 const delete_delete_recipes = (connection, response, recipeID) => {
+	server.log('delete_delete_recipes');
 	connection.query(`DELETE FROM recipes WHERE recipeID=?;`, [recipeID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		delete_delete_userrecipes(connection, response, recipeID);
@@ -174,6 +181,7 @@ const delete_delete_recipes = (connection, response, recipeID) => {
 
 // 3. DELETE
 const delete_delete_userrecipes = (connection, response, recipeID) => {
+	server.log('delete_delete_userrecipes');
 	connection.query(`DELETE FROM user_recipes where recipeID=?;`, [recipeID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		delete_delete_grouprecipes(connection, response, recipeID);
@@ -182,9 +190,11 @@ const delete_delete_userrecipes = (connection, response, recipeID) => {
 
 // 4. DELETE
 const delete_delete_grouprecipes = (connection, response, recipeID) => {
+	server.log('delete_delete_grouprecipes');
 	connection.query(`DELETE FROM group_recipes WHERE recipeID=?;`, [recipeID], (error) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		// 5. ENDPOINT
+		server.log('Delete Recipe Endpoint');
 		server.endRequestSuccess(response);
 	});
 }
@@ -206,30 +216,27 @@ const delete_delete_grouprecipes = (connection, response, recipeID) => {
 
 // 0. STARTPOINT
 router.post('/get', (request, response) => {
+	server.log('Get Recipes Startpoint');
 	response.set({ 'Content-Type': 'application/json' });
 	const connection = server.connect;
-
 	get_select_userrecipes(connection, response, request.body.userID, request.body.groups.map(group => group.groupID))
 });
 
 // 1. SELECT
 const get_select_userrecipes = (connection, response, userID, groupIDs) => {
+	server.log('get_select_userrecipes');
 	if (userID) {
-
 		// Create and initialize object that will be returned to client with recipe info,
 		// Includes the actual recipes, but also the associated data for where they are from
 		const recipeObj = { userRecipes: [], allRecipes: [], recipes: [], };
 		groupIDs.forEach(group => {	recipeObj[group] = []; });
-
 		connection.query(`SELECT recipeID FROM user_recipes WHERE userID = ?;`, [userID], (error, results) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 			// Add results to both users and all recipe associations in object to be returned to client
 			results.forEach(result => {
 				recipeObj.userRecipes.push(result.recipeID);
 				recipeObj.allRecipes.push(result.recipeID)
 			});
-
 			get_select_grouprecipes(connection, response, groupIDs, recipeObj, userID)
 		});
 	} else {
@@ -240,16 +247,15 @@ const get_select_userrecipes = (connection, response, userID, groupIDs) => {
 
 // 2. SELECT
 const get_select_grouprecipes = (connection, response, groupIDs, recipeObj, userID) => {
+	server.log('get_select_grouprecipes');
 	if (groupIDs.length > 0) { // If no groups provided, skip this query
 		connection.query(`SELECT recipeID, groupID FROM group_recipes WHERE groupID IN (?);`, [groupIDs], (error, results) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 			// Add results to both groups and all recipe associations in object to be returned to client
 			results.forEach(result => {
 				recipeObj[result.groupID].push(result.recipeID);
 				recipeObj.allRecipes.push(result.recipeID);
 			});
-			
 			get_select_recipes(connection, response , recipeObj, userID);
 		});
 	} else {
@@ -259,11 +265,11 @@ const get_select_grouprecipes = (connection, response, groupIDs, recipeObj, user
 
 // 3. SELECT
 const get_select_recipes = (connection, response, recipeObj, userID) => {
+	server.log('get_select_recipes');
 	// Make sure allRecipes are unique by leveraging Set
 	const recipes = recipeObj.allRecipes.length ? [...new Set(recipeObj.allRecipes)] : [-1];
 	connection.query(`SELECT * FROM recipes WHERE recipeID IN (?) OR owner=?;`, [recipes, userID], (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
-
 		if (results.length > 0) {
 			// Create new recipe in object to be returned with all data
 			results.forEach(result => {
@@ -280,6 +286,7 @@ const get_select_recipes = (connection, response, recipeObj, userID) => {
 				});
 			});
 			// 4. ENDPOINT
+			server.log('Get Recipes Endpoint');
 			server.endRequestSuccess(response, recipeObj);
 		} else {
 			// 3.1 ENDEARLY
