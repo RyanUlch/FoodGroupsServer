@@ -32,7 +32,7 @@ router.post('/get', (request, response) => {
 	connection.query(`SELECT groupID, groupName FROM \`groups\` WHERE groupID IN (SELECT groupID FROM user_groups WHERE userID=?);`, [request.body.userID], (error, results) => {
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		const groupArr = [];
-		results.forEach(result => groupArr.push({groupID: result.groupID, groupName: result.groupName}));
+		results.forEach(result => groupArr.push({groupID: result.groupID, groupName: result.groupName, recipeIDs: []}));
 		// 2. ENDPOINT 
 		server.log('Get Groups Endpoint');
 		server.endRequestSuccess(response, groupArr);

@@ -83,9 +83,9 @@ const addedit_insert_userrecipes = (connection, response, id, body) => {
 // 4. INSERT
 const addedit_insert_grouprecipes = (connection, response, id, body) => {
 	server.log('addedit_insert_grouprecipes');
-	const groupsAddArr = body.groupsToAddTo;
-	if (groupsAddArr.length > 0) { 	// If no groups provided, skip this query
-		for (let i = 0; i < groupsAddArr; ++i) groupsAddArr[i].push(id);
+	const groupsAddArr = [];
+	if (body.groupsToAddTo.length > 0) { 	// If no groups provided, skip this query
+		body.groupsToAddTo.forEach((group) => groupsAddArr.push([group, id]));
 		connection.query(`INSERT IGNORE INTO group_recipes (groupID, recipeID) VALUES ?;`, [groupsAddArr], (error) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
 			addedit_delete_grouprecipes(connection, response, id, body);
@@ -98,10 +98,10 @@ const addedit_insert_grouprecipes = (connection, response, id, body) => {
 // 5. DELETE
 const addedit_delete_grouprecipes = (connection, response, id, body) => {
 	server.log('addedit_delete_grouprecipes');
-	const groupsDelArr = body.groupsToDeleteFrom;
-	if (groupsDelArr.length > 0) { 	// If no groups provided, skip this query
-		for (let i = 0; i < groupsDelArr; ++i) groupsDelArr[i].push(id);
-		connection.query(`DELETE FROM group_recipes WHERE (groupID, recipeID) IN (?);`, [groupsDelArr], (error) => {
+	const groupsDelArr =[];
+	if (body.groupsToDeleteFrom.length > 0) { 	// If no groups provided, skip this query
+		body.groupsToDeleteFrom.forEach((group) => groupsDelArr.push([group, id]));
+		connection.query(`DELETE FROM group_recipes WHERE (groupID, recipeID) IN ?;`, [groupsDelArr], (error) => {
 			if (error) { server.endRequestFailure(error, response); return console.error(error); }
 			addedit_select_recipes(connection, response, id);
 		});
