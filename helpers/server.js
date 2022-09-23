@@ -14,7 +14,7 @@ const connect = mysql.createConnection({
 
 // Sends response to client with success response and optional payload
 const endRequestSuccess = (response, payload = null) => {
-	console.log('Ending:\tSuccess');
+	console.log('Ending:\t\tSuccess');
 	response.json({
 		response: 'success',
 		payload: payload,
@@ -23,7 +23,7 @@ const endRequestSuccess = (response, payload = null) => {
 
 // Sends response to client with failure response and message about the failure
 const endRequestFailure = (msg, response) => {
-	console.log('Ending:\tFailure');
+	console.log('Ending:\t\tFailure');
 	response.json({
 		response: 'failure',
 		msg: msg,
