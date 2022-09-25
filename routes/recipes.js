@@ -268,7 +268,9 @@ const get_select_recipes = (connection, response, recipeObj, userID) => {
 	server.log('get_select_recipes');
 	// Make sure allRecipes are unique by leveraging Set
 	const recipes = recipeObj.allRecipes.length ? [...new Set(recipeObj.allRecipes)] : [-1];
+	recipeObj.allRecipes = recipes;
 	connection.query(`SELECT * FROM recipes WHERE recipeID IN (?) OR owner=?;`, [recipes, userID], (error, results) => {
+		console.log(results);
 		if (error) { server.endRequestFailure(error, response); return console.error(error); }
 		if (results.length > 0) {
 			// Create new recipe in object to be returned with all data
@@ -285,6 +287,7 @@ const get_select_recipes = (connection, response, recipeObj, userID) => {
 					servings: result.servings,
 				});
 			});
+			console.log(recipeObj);
 			// 4. ENDPOINT
 			server.log('Get Recipes Endpoint');
 			server.endRequestSuccess(response, recipeObj);
