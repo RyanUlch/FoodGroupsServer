@@ -25,17 +25,17 @@ const router = express.Router();
 // 0. STARTPOINT
 router.post('/get', (request, response) => {
 	server.log('Get Groups Startpoint');
+	const connection = server.connect();
 	response.set({ 'Content-Type': 'application/json' });
-	const connection = server.connect;
 	// 1. SELECT
 	server.log('Get Groups_select');
 	connection.query(`SELECT groupID, groupName FROM \`groups\` WHERE groupID IN (SELECT groupID FROM user_groups WHERE userID=?);`, [request.body.userID], (error, results) => {
-		if (error) { server.endRequestFailure(error, response); return console.error(error); }
+		if (error) { server.endRequestFailure(error, response, connection); return console.error(error); }
 		const groupArr = [];
 		results.forEach(result => groupArr.push({groupID: result.groupID, groupName: result.groupName, recipeIDs: []}));
 		// 2. ENDPOINT 
 		server.log('Get Groups Endpoint');
-		server.endRequestSuccess(response, groupArr);
+		server.endRequestSuccess(response, connection, groupArr);
 	});
 });
 
@@ -57,9 +57,9 @@ router.post('/get', (request, response) => {
 
 // 0. STARTPOINT
 router.post('/join', (request, response) => {
-	server.log('Join Group Startpoin');
+	server.log('Join Group Startpoint');
+	const connection = server.connect();
 	response.set({ 'Content-Type': 'application/json' });
-	const connection = server.connect;
 	join_select_groups(connection, response, request.body)
 });
 
@@ -67,12 +67,12 @@ router.post('/join', (request, response) => {
 const join_select_groups = (connection, response, body) => {
 	server.log('join_select_groups');
 	connection.query(`SELECT * FROM \`groups\` WHERE groupName=?;`, [body.groupName], (error, results) => {
-		if (error) { server.endRequestFailure(error, response); return console.error(error); }
+		if (error) { server.endRequestFailure(error, response, connection); return console.error(error); }
 		if (results.length) {
 			join_verify(connection, response, body.groupPass, results[0], body.userID);
 		} else {
 			// 1.1 FAILOUT
-			server.endRequestFailure('No Groups with that name created, feel free to create one!', response);
+			server.endRequestFailure('No Groups with that name created, feel free to create one!', response, connection);
 		}
 	});
 }
@@ -86,9 +86,9 @@ const join_verify = (connection, response, clientPass, groupInfo, userID) => {
 		if (stdout === 'true') {
 			join_replace_usergroups(connection, response, groupInfo, userID);
 		} else if (stdout === 'false') {
-			server.endRequestFailure('That password is incorrect', response);
+			server.endRequestFailure('That password is incorrect', response, connection);
 		} else {
-			server.endRequestFailure(err, response);
+			server.endRequestFailure(err, response, connection);
 		}
 	});
 }
@@ -97,7 +97,7 @@ const join_verify = (connection, response, clientPass, groupInfo, userID) => {
 const join_replace_usergroups = (connection, response, groupInfo, userID) => {
 	server.log('join_replace_usergroups');
 	connection.query(`REPLACE INTO user_groups (userID, groupID) VALUES (?, ?);`, [userID, groupInfo.groupID], (error) => {
-		if (error) { server.endRequestFailure(error, response); return console.error(error); }
+		if (error) { server.endRequestFailure(error, response, connection); return console.error(error); }
 		join_select_grouprecipes(connection, response, groupInfo);
 	});
 }
@@ -106,12 +106,12 @@ const join_replace_usergroups = (connection, response, groupInfo, userID) => {
 const join_select_grouprecipes = (connection, response, groupInfo) => {
 	server.log('join_select_grouprecipes');
 	connection.query(`SELECT * FROM group_recipes WHERE groupID=?;`, [groupInfo.groupID], (error, results) => {
-		if (error) { server.endRequestFailure(error, response); return console.error(error); }
+		if (error) { server.endRequestFailure(error, response, connection); return console.error(error); }
 		const list = [];
 		for (const result of results) {	list.push(result.recipeID);	}
 		// 5. ENDPOINT
 		server.log('Join Group Endpoint');
-		server.endRequestSuccess(response, {
+		server.endRequestSuccess(response, connection, {
 			groupID: groupInfo.groupID,
 			groupName: groupInfo.groupName,
 			recipeIDs: list,
@@ -138,8 +138,8 @@ const join_select_grouprecipes = (connection, response, groupInfo) => {
 // 0. STARTPOINT
 router.post('/create', (request, response) => {
 	server.log('Create Group Startpoint');
+	const connection = server.connect();
 	response.set({ 'Content-Type': 'application/json' });
-	const connection = server.connect;
 	create_select_groups(connection, response, request.body);
 });
 
@@ -147,10 +147,10 @@ router.post('/create', (request, response) => {
 const create_select_groups = (connection, response, body) => {
 	server.log('create_select_groups');
 	connection.query(`SELECT * FROM \`groups\` WHERE groupName=?;`, [body.groupName], (error, results) => {
-		if (error) { server.endRequestFailure(error, response); return console.error(error); }
+		if (error) { server.endRequestFailure(error, response, connection); return console.error(error); }
 		if (results.length > 0) {
 			// 1.1 FAILOUT
-			server.endRequestFailure('Group name already taken', response);
+			server.endRequestFailure('Group name already taken', response, connection);
 		} else {
 			create_hash(connection, response, body);
 		}
@@ -173,7 +173,7 @@ const create_hash = (connection, response, body) => {
 const create_insert_groups = (connection, response, password, body) => {
 	server.log('create_insert_groups');
 	connection.query(`INSERT INTO \`groups\` (groupName, groupPass) VALUES (?, ?);`, [body.groupName, password], (error) => {
-		if (error) { server.endRequestFailure(error, response); return console.error(error); }
+		if (error) { server.endRequestFailure(error, response, connection); return console.error(error); }
 		create_id(connection, response, body);
 	});
 }
@@ -182,7 +182,7 @@ const create_insert_groups = (connection, response, password, body) => {
 const create_id = (connection, response, body) => {
 	server.log('create_id');
 	connection.query('SELECT LAST_INSERT_ID()', (error, results) => {
-		if (error) { server.endRequestFailure(error, response); return console.error(error); }
+		if (error) { server.endRequestFailure(error, response, connection); return console.error(error); }
 		create_insert_usergroups(connection, response, body, Number(results[0]['LAST_INSERT_ID()']));
 	});
 }
@@ -191,10 +191,10 @@ const create_id = (connection, response, body) => {
 const create_insert_usergroups = (connection, response, body, groupID) => {
 	server.log('create_insert_usergroups');
 	connection.query(`INSERT INTO user_groups (userID, groupID) VALUES (?, ?);`, [body.userID, groupID], (error) => {
-		if (error) { server.endRequestFailure(error, response); return console.error(error); }
+		if (error) { server.endRequestFailure(error, response, connection); return console.error(error); }
 		// 6. ENDPOINT
 		server.log('Create Group Endpoint');
-		server.endRequestSuccess(response, {
+		server.endRequestSuccess(response, connection, {
 			groupID: groupID,
 			groupName: body.groupName,
 			recipeIDs: [],
@@ -216,15 +216,15 @@ const create_insert_usergroups = (connection, response, body, groupID) => {
 // 0. STARTPOINT
 router.post('/leave', (request, response) => {
 	server.log('Leave Group Startpoint');
+	const connection = server.connect();
 	response.set({ 'Content-Type': 'application/json' });	
-	const connection = server.connect;
 	// 1. DELETE
 	server.log('leave_delete');
 	connection.query(`DELETE FROM user_groups WHERE userID=? AND groupID=?;`, [request.body.userID, request.body.groupID], (error) => {
-		if (error) { server.endRequestFailure(error, response); return console.error(error); }
+		if (error) { server.endRequestFailure(error, response, connection); return console.error(error); }
 		// 2. ENDPOINT
 		server.log('Leave Group Endpoint');
-		server.endRequestSuccess(response);
+		server.endRequestSuccess(response, connection);
 	});
 });
 

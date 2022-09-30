@@ -67,7 +67,7 @@ router.get('/download/:imageurl', (request, response) => {
 	if (fs.existsSync(imageURL)) {
 		// 2. ENDPOINT
 		server.log('Download Image Endpoint');
-		response.sendFile(imageURL)
+		response.sendFile(imageURL);
 	} else {
 		// 1.1 FAILOUT
 		server.endRequestFailure('No image with that filename on server', response);

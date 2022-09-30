@@ -26,8 +26,8 @@ const router = express.Router();
 // 0. STARTPOINT
 router.post('/', (request, response) => {
 	server.log('User Sessions Startpoint')
+	const connection = server.connect();
 	response.set({ 'Content-Type': 'application/json' });
-	const connection = server.connect;
 	select_usersessions(connection, response, request.body.userID, request.body.token);
 });
 
@@ -36,22 +36,22 @@ const select_usersessions = (connection, response, userID, userToken) => {
 	server.log('select_usersessions')
 	if (userID && userToken && token.validate(userToken)) {
 		connection.query(`SELECT sessionID FROM user_sessions WHERE userID = ?;`, [userID], (error, results) => {
-			if (error) { server.endRequestFailure(error, response); return console.error(error); }
+			if (error) { server.endRequestFailure(error, response, connection); return console.error(error); }
 			if (results.length === 0) {
 				// 1.2 FAILOUT
-				server.endRequestFailure('No Session in DB', response);
+				server.endRequestFailure('No Session in DB', response, connection);
 			} else {
 				if (results[0].sessionID === userToken) {
 					select_users(connection, response, userID);
 				} else {
 					// 1.3 FAILOUT
-					server.endRequestFailure('Session does not match DB', response);
+					server.endRequestFailure('Session does not match DB', response, connection);
 				}
 			}
 		});
 	} else {
 		// 1.1 FAILOUT
-		server.endRequestFailure('No Session Provided', response);
+		server.endRequestFailure('No Session Provided', response, connection);
 	}
 }
 
@@ -59,15 +59,15 @@ const select_usersessions = (connection, response, userID, userToken) => {
 const select_users = (connection, response, userID) => {
 	server.log('select_users')
 	connection.query(`SELECT userID, username FROM users WHERE userID = ?;`, [userID], (error, results) => {
-		if (error) { server.endRequestFailure(error, response); return console.error(error); }
+		if (error) { server.endRequestFailure(error, response, connection); return console.error(error); }
 
 		if (results.length === 0) {
 			// 2.1 FAILOUT
-			server.endRequestFailure('That username does not exist...', response);
+			server.endRequestFailure('That username does not exist...', response, connection);
 		} else {
 			// 3. ENDPOINT
 			server.log('User Sessions Endpoint')
-			server.endRequestSuccess(response, {
+			server.endRequestSuccess(response, connection, {
 				userID: results[0].userID,
 				username: results[0].username,
 			});
