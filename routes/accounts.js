@@ -65,8 +65,11 @@ const login_select_users = (connection, response, username, password) => {
 const login_verify_password = (connection, response, results, clientPass) => {
 	server.log('login_verify_password');
 	const phpString = `echo password_verify('${clientPass}', '${results.password}') ? 'true' : 'false';`
+	console.log(phpString);
 	const runner = require('child_process');
-	runner.execFile('php', ['-r', phpString], (err, stdout) => {
+	console.log(runner);
+	runner.execFile('/usr/local/bin/php', ['-r', phpString], (err, stdout) => {
+		console.log(err);
 		if (stdout === 'true') {
 			login_replace_usersessions(connection, response, results);
 		} else if (stdout === 'false') {
@@ -148,7 +151,9 @@ const signup_hash_password = (connection, response, password, username, email) =
 	server.log('signup_hash_password');
 	const runner = require('child_process');
 	const phpString = `echo password_hash('${password}', PASSWORD_DEFAULT);`;
-	runner.execFile('php', ['-r', phpString], (err, stdout) => {
+	console.log(phpString);
+	runner.execFile('/usr/local/bin/php', ['-r', phpString], (err, stdout, stderr) => {
+		console.log(err);
 		if (!err) { 
 			signup_insert_users(connection, response, username, email, stdout);
 		} else {
